@@ -1,0 +1,60 @@
+name: Flutter Frontend CI
+
+on:
+  push:
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/frontend.yml'
+    branches:
+      - main
+  pull_request:
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/frontend.yml'
+
+jobs:
+  build:
+    name: Build & Test Flutter
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "stable"
+          cache: true
+
+      - name: Verify Flutter Installation
+        run: flutter doctor
+
+      - name: Install Dependencies
+        run: flutter pub get
+        working-directory: frontend
+
+      - name: Run Tests
+        run: flutter test
+        working-directory: frontend
+
+      - name: Build APK
+        run: |
+          flutter build apk --release
+        working-directory: frontend
+
+      - name: Verify APK Exists
+        run: ls -lh frontend/build/app/outputs/flutter-apk/
+      
+      - name: Upload APK
+        uses: actions/upload-artifact@v3
+        with:
+          name: flutter-apk
+          path: frontend/build/app/outputs/flutter-apk/**/*.apk
+
+      - name: Cleanup Artifacts
+        if: always()
+        run: rm -rf frontend/build
